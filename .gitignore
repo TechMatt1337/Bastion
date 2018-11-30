@@ -1,2 +1,3 @@
 *.pem
 *.onnx
+*/node_modules/*
