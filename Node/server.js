@@ -34,7 +34,7 @@ app.get('/api/', (req, res) => {
 	data = {targets:[]};
 	sql = 'SELECT last_name lname, first_name fname, is_target is_t, ' +
 	      'image1 img1, image2 img2, image3 img3 FROM targets ' +
-	      'WHERE when_added >= ' + lastupdate;
+	      'WHERE last_updated >= ' + lastupdate;
 	db.all(sql, [], (err, rows) => {
         	if (err) {
                 	throw err;
@@ -55,7 +55,6 @@ app.get('/api/', (req, res) => {
 
 // must be sent as x-www-form-urlencoded
 app.post('/api/', (req, res) => {
-	var sql = false;
 	if (req.body.operation) {
 		if (req.body.operation == 'update_target') {
 			if (req.body.value && req.body.fname && req.body.lname) {
@@ -63,10 +62,11 @@ app.post('/api/', (req, res) => {
 	                        if (newValue != 0) {
 					newValue = 1;
         	                }
-                	        sql = 'UPDATE targets SET is_target = ? ' +
-				      'WHERE last_name = ? and ' +
+				var time = (new Date).getTime();
+                	        var sql = 'UPDATE targets SET is_target = ?, ' +
+				      'last_updated = ? WHERE last_name = ? and ' +
 				      'first_name = ?';
-				db.all(sql, [newValue,
+				db.all(sql, [newValue, time,
 					     req.body.lname,
 					     req.body.fname], (err, rows) => {
 			                if (err) {
@@ -75,7 +75,8 @@ app.post('/api/', (req, res) => {
 					console.log('UPDATED ' +
 						req.body.lname + ', ' +
 						req.body.fname + ' TO ' +
-						((newValue) ? 'TARGET' : 'NOT TARGET'));
+						((newValue) ? 'TARGET' : 'NOT TARGET' +
+						' AT ' + time));
 				});
 			}
 		} else if (req.body.operation == 'new_target') {
