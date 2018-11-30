@@ -55,6 +55,7 @@ app.get('/api/', (req, res) => {
 
 // must be sent as x-www-form-urlencoded
 app.post('/api/', (req, res) => {
+	result = false;
 	if (req.body.operation) {
 		if (req.body.operation == 'update_target') {
 			if (req.body.value && req.body.fname && req.body.lname) {
@@ -78,12 +79,31 @@ app.post('/api/', (req, res) => {
 						((newValue) ? 'TARGET' : 'NOT TARGET' +
 						' AT ' + time));
 				});
+				result = true;
 			}
 		} else if (req.body.operation == 'new_target') {
+			if (req.body.fname && req.body.lname &&
+			    req.body.img1 && req.body.img2 && req.body.img3) {
+				var time = (new Date).getTime();
+				var sql = 'REPLACE INTO targets (last_name, first_name, ' +
+                                      'last_updated, image1, image2, image3) ' +
+				      'VALUES (?, ?, ?, ?, ?, ?)';
+				db.all(sql, [req.body.lname, req.body.fname, time,
+					     req.body.img1, req.body.img2, req.body.img3],
+				       (err, rows) => {
+					if (err) {
+						throw err;
+					}
+					console.log('ADDED ' +
+						req.body.lname + ', ' +
+						req.body.fname + ' WITH NEW IMAGES ');
+				});
+				result = true;
 
+			}
 		}
 	}
-	res.send(req.body);
+	res.send({success: result});;
 });
 
 
