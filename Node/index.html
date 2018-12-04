@@ -1,0 +1,46 @@
+<iframe width="0" height="0" border="0" name="dummyframe" id="dummyframe"></iframe>
+
+<form action="/api" method="post" onsubmit="this.submit(); this.reset(); return false;" target="dummyframe" enctype="multipart/form-data">
+  <fieldset>
+    <legend>New/Update Target:</legend>
+    <input type="hidden" name="operation" value="new_target">
+    First name:<br>
+    <input type="text" name="fname" required><br>
+    Last name:<br>
+    <input type="text" name="lname" required><br>
+    Image 1:<br>
+    <input type="file" name="imgs" required><br>
+    Image 2:<br>
+    <input type="file" name="imgs" required><br>
+    Image 3:<br>
+    <input type="file" name="imgs" required><br>
+    Image 4:<br>
+    <input type="file" name="imgs" required><br>
+    Image 5:<br>
+    <input type="file" name="imgs" required><br>
+    Image 6:<br>
+    <input type="file" name="imgs" required><br><br>
+
+
+    <input type="submit" value="Submit">
+  </fieldset>
+</form>
+
+
+<form action="/api" method="post" onsubmit="this.submit(); this.reset(); return false;" target="dummyframe" enctype="multipart/form-data">
+  <fieldset>
+    <legend>Set Target as Targetable:</legend>
+    <input type="hidden" name="operation" value="update_target">
+    First name:<br>
+    <input type="text" name="fname" required><br>
+    Last name:<br>
+    <input type="text" name="lname" required><br>
+    Is Target Targetable?<br>
+    <input type="radio" name="value" value=1 checked> Is Target<br>
+    <input type="radio" name="value" value=0> Is Not Target<br><br>
+
+
+    <input type="submit" value="Submit">
+  </fieldset>
+</form>
+
