@@ -4,7 +4,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
-const LZString = require('lz-string');
+const spawn = require('child_process').spawn;
 
 const app = express();
 const port = 80;

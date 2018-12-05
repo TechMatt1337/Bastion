@@ -17,3 +17,4 @@ r = requests.get(url = URL, params = PARAMS)
 data = r.json()
 
 print(data)
+print(data["target_updates"])
