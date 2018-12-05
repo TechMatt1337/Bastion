@@ -10,7 +10,6 @@ import base64
 import sys
 #For numpy arrays
 import numpy as np
-import StringIO
 
 #function to detect face using OpenCV
 def detect_face(img):
@@ -61,14 +60,7 @@ for row in c.execute('SELECT * FROM images'):
 
     for i in range(2,8):
         buff = base64.b64decode(row[i])
-        #Fails on detectMultiScale
-        #arr = np.fromstring(buff)
-        #Can't decode
-        #arr = np.array(buff, dtype='int')
-        #Can't decode
-        io = StringIO.StringIO(buff)
-        #arr = np.array(io)
-        arr = np.asarray(bytearray(io.read()), dtype=np.uint8)
+        arr = np.asarray(bytearray(buff), dtype=np.uint8)
         frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
 
         if frame is None:
