@@ -64,7 +64,7 @@ app.get('/api/', (req, res) => {
 
 	                        data.image_updates.push(curJSON);
 	                });
-			res.send(data);
+			res.json(data);
 	        });
 
 	});
@@ -128,7 +128,7 @@ app.get('/api/images/', (req, res) => {
 
 			}
                 });
-		res.send(data);
+		res.json(data);
         });
 });
 
@@ -193,7 +193,7 @@ app.post('/api/', upload.array('imgs',6), (req, res) => {
 			}
 		}
 	}
-	res.send({success: result});;
+	res.json({success: result});;
 });
 
 
