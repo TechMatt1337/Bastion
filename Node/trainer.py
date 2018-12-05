@@ -4,9 +4,13 @@ import sqlite3
 import pickle
 #CV to train
 import cv2
-#Unbase 64 encode images
+#Base64 encode images
 import base64
+#For exit
 import sys
+#For numpy arrays
+import numpy as np
+import StringIO
 
 #function to detect face using OpenCV
 def detect_face(img):
@@ -45,22 +49,53 @@ conn = sqlite3.connect('targets.db')
 c = conn.cursor()
 
 labels = []
+names = []
 faces = []
+
+label = 1
 
 #Read all face/labels into lists
 #LAST FIRST, I0, ..., LAST_UPDATED
 for row in c.execute('SELECT * FROM images'):
-    label = row[0] + " " + row[1]
-    for i in range(2,9):
-        face, rect = detect_face(row[i])
+    name = row[0] + " " + row[1]
+
+    for i in range(2,8):
+        buff = base64.b64decode(row[i])
+        #Fails on detectMultiScale
+        #arr = np.fromstring(buff)
+        #Can't decode
+        #arr = np.array(buff, dtype='int')
+        #Can't decode
+        io = StringIO.StringIO(buff)
+        #arr = np.array(io)
+        arr = np.asarray(bytearray(io.read()), dtype=np.uint8)
+        frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+
+        if frame is None:
+                print("I can't even make an image!")
+                c.close()
+                conn.close()
+                sys.exit()
+
+        face, rect = detect_face(frame)
 
         if face is not None:
+            #If a face is detected, add to the training set
             labels.append(label)
             faces.append(face)
 
     if labels[:-1] != label:
-        print("Unable to get good face of " + label)
+        print("Unable to get good face of " + name)
+        c.close()
+        conn.close()
         sys.exit()
+
+    names.append(name)
+    label = label + 1
+
+#Finish the connection
+c.close()
+conn.close()
 
 #create our LBPH face recognizer 
 face_recognizer = cv2.face.LBPHFaceRecognizer_create()
@@ -75,4 +110,6 @@ face_recognizer = cv2.face.LBPHFaceRecognizer_create()
 #train our face recognizer of our training faces
 face_recognizer.train(faces, np.array(labels))
 
-print(pickle.dumps(face_recognizer))
+result = {'model': face_recognizer, 'names': names}
+
+print(base64.b64encode(pickle.dumps(result)))
