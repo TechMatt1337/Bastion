@@ -11,12 +11,12 @@ STEPTYPES = {	"single":Adafruit_MotorHAT.SINGLE,
 		"double":Adafruit_MotorHAT.DOUBLE,
 		"interleave":Adafruit_MotorHAT.INTERLEAVE,
 		"micro":Adafruit_MotorHAT.MICROSTEP}
+MOTORS = {"horizontal":1,"vertical":3}
 
-class MotorControler:
+class MotorController:
 
-
-	# create a default object, no changes to I2C address or frequency
-	def __init__(self,motorPort = 1,steps = 200,addr = 0x60):
+	def __init__(self,motor,steps = 200,addr = 0x60):
+                motorPort = MOTORS[motor]
 		self.motorPort = motorPort
 		self.steps = steps
 		self.hatAddress = addr
@@ -25,7 +25,19 @@ class MotorControler:
 		self.stepperMotor = MH.getStepper(steps, motorPort)
 		self.stepperMotor.setSpeed(30)
 
-	def rotateMotor(self,degree = 0,dir = "cw",step = "double"):
+	def rotateMotor(self,degree,dir = "cw",step = "double"):
+                """
+                Rotate motor for a certain degree from where it is located 
+                at in a specified direction.
+                Inputs: degree  -   Degrees to rotate
+                        dir     -   cw or ccw rotation
+                        step    -   Type of step motor should make for 
+                                    rotation. By default it is set to 'double';
+                                    which provides the highest torque that
+                                    the motor is able to provide.
+                                    Other types types of steps include 
+                                    'single', 'interleave', and 'microstep'.
+                """
                 # print("ROTATING MOTOR")
                 x = 0
                 if step == "interleave":
@@ -35,13 +47,16 @@ class MotorControler:
                 self.stepperMotor.step(x,DIRECTIONS[dir],STEPTYPES[step])
 
 
-	# recommended for auto-disabling motors on shutdown!
 	def turnOffMotors():
+                """
+                Turn off all motors
+                """
 	        MH.getMotor(1).run(Adafruit_MotorHAT.RELEASE)
 	        MH.getMotor(2).run(Adafruit_MotorHAT.RELEASE)
 	        MH.getMotor(3).run(Adafruit_MotorHAT.RELEASE)
 	        MH.getMotor(4).run(Adafruit_MotorHAT.RELEASE)
 	 
+	# recommended for auto-disabling motors on shutdown!
 	atexit.register(turnOffMotors)
 
 if __name__ == '__main__':
