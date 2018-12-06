@@ -14,8 +14,10 @@ import os
 import numpy as np
 #Kinect driver API
 import freenect
-#Get information about cv package version
-import sys
+#Deincode the incoming models
+import base64
+#Depickle the incoming model
+import pickle
 
 # ### Training Data
 
@@ -36,54 +38,6 @@ import sys
 # ```
 # 
 # The _`test-data`_ folder contains images that we will use to test our face recognizer after it has been successfully trained.
-
-# As OpenCV face recognizer accepts labels as integers so we need to define a mapping between integer labels and persons actual names so below I am defining a mapping of persons integer labels and their respective names. 
-# 
-# **Note:** As we have not assigned `label 0` to any person so **the mapping for label 0 is empty**. 
-
-# In[2]:
-
-#there is no label 0 in our training data so subject name for index/label 0 is empty
-subjects = ["", "Andrew Guinn"]
-
-
-# ### Prepare training data
-
-# You may be wondering why data preparation, right? Well, OpenCV face recognizer accepts data in a specific format. It accepts two vectors, one vector is of faces of all the persons and the second vector is of integer labels for each face so that when processing a face the face recognizer knows which person that particular face belongs too. 
-# 
-# For example, if we had 2 persons and 2 images for each person. 
-# 
-# ```
-# PERSON-1    PERSON-2   
-# 
-# img1        img1         
-# img2        img2
-# ```
-# 
-# Then the prepare data step will produce following face and label vectors.
-# 
-# ```
-# FACES                        LABELS
-# 
-# person1_img1_face              1
-# person1_img2_face              1
-# person2_img1_face              2
-# person2_img2_face              2
-# ```
-# 
-# 
-# Preparing data step can be further divided into following sub-steps.
-# 
-# 1. Read all the folder names of subjects/persons provided in training data folder. So for example, in this tutorial we have folder names: `s1, s2`. 
-# 2. For each subject, extract label number. **Do you remember that our folders have a special naming convention?** Folder names follow the format `sLabel` where `Label` is an integer representing the label we have assigned to that subject. So for example, folder name `s1` means that the subject has label 1, s2 means subject label is 2 and so on. The label extracted in this step is assigned to each face detected in the next step. 
-# 3. Read all the images of the subject, detect face from each image.
-# 4. Add each face to faces vector with corresponding subject label (extracted in above step) added to labels vector. 
-# 
-# **[There should be a visualization for above steps here]**
-
-# Did you read my last article on [face detection](https://www.superdatascience.com/opencv-face-detection/)? No? Then you better do so right now because to detect faces, I am going to use the code from my previous article on [face detection](https://www.superdatascience.com/opencv-face-detection/). So if you have not read it, I encourage you to do so to understand how face detection works and its coding. Below is the same code.
-
-# In[3]:
 
 #function to detect face using OpenCV
 def detect_face(img):
@@ -194,13 +148,13 @@ def prepare_training_data(data_folder_path):
 #data will be in two lists of same size
 #one list will contain all the faces
 #and other list will contain respective labels for each face
-print("Preparing data...")
-faces, labels = prepare_training_data("training-data")
-print("Data prepared")
+#print("Preparing data...")
+#faces, labels = prepare_training_data("training-data")
+#print("Data prepared")
 
 #print total faces and labels
-print("Total faces: ", len(faces))
-print("Total labels: ", len(labels))
+#print("Total faces: ", len(faces))
+#print("Total labels: ", len(labels))
 
 
 # This was probably the boring part, right? Don't worry, the fun stuff is coming up next. It's time to train our own face recognizer so that once trained it can recognize new faces of the persons it was trained on. Read? Ok then let's train our face recognizer. 
@@ -264,7 +218,7 @@ def predict(img):
         #draw_rectangle(img, rect)
         #draw name of predicted person
         #draw_text(img, label_text, rect[0], rect[1]-5)
-        print("I found " + str(label_text) + " with " + str(confidence) + " confidence!")
+        #print("I found " + str(label_text) + " with " + str(confidence) + " confidence!")
         return (label_text, rect, confidence)
 
 #Get frame from kinect and scale down resolution for speed purposes
@@ -276,19 +230,14 @@ def get_video():
     dst = cv2.resize(array,dim)
     return dst
 
-(major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
-
 #Tracker code from: https://www.learnopencv.com/object-tracking-using-opencv-cpp-python/
-print("Initializing tracker...")
+#print("Initializing tracker...")
 
 def create_tracker():
     tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
     #Normally use KCF, shouldn't use anything above that
     tracker_type = tracker_types[2]
 
-    #if int(minor_ver) < 3:
-    #    track = cv2.Tracker_create(tracker_type)
-    #else:
     if tracker_type == 'BOOSTING':
         track = cv2.TrackerBoosting_create()
     if tracker_type == 'MIL':
@@ -330,7 +279,7 @@ while 1:
             #Determine X and Y angles 
             mid_face = (bbox[0] + bbox[2]/2, bbox[1] + bbox[3]/2)
 
-            print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
+            #print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
 
             #https://stackoverflow.com/questions/37642834/opencv-how-to-calculate-the-degreesangles-of-an-object-with-its-coordinates
             #The Kinect v1 image is 640 pixels in width and 480 in height
@@ -341,7 +290,7 @@ while 1:
             y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
             #x_angle = (mid_face[0] - 160) * (62/320)
             #y_angle = (mid_face[1] - 120) * (48.6/240)
-            print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
+            #print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
 
             #
             # MOVE MOTORS HERE!!!!!
