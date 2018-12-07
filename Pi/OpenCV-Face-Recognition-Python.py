@@ -40,6 +40,10 @@ labels = []
 
 #Query the API to update the targeting model if required
 def query_api(timestamp):
+    global targets
+    global face_recognizer
+    global labels
+
     flag = 0
 
     # defining a params dict for the parameters to be sent to the API
@@ -69,14 +73,17 @@ def query_api(timestamp):
         #Sanity check
         if data['model'] != None:
             #Decode the data
-            buff = base64.decode(data['model'])
+            buff = base64.b64decode(data['model'])
             info = pickle.loads(buff)
 
             #Load the new targeting labels
             labels = info['names']
-
             #Load the new model
-            face_recognizer.loadFromString(info['model'])
+            tmp = open("tmp", "a+")
+            tmp.write(info['model'])
+            tmp.close()
+            face_recognizer.read("tmp")
+            os.remove("tmp")
             flag = 2
 
     return flag
@@ -112,6 +119,8 @@ def detect_face(img):
 #and draws a rectangle around detected face with name of the 
 #subject
 def predict(img):
+    global face_recognizer
+    global labels
     if img is not None:
         #make a copy of the image as we don't want to chang original image
         #img = test_img.copy()
@@ -125,7 +134,7 @@ def predict(img):
         #predict the image using our face recognizer 
         label, confidence = face_recognizer.predict(face)
         #get name of respective label returned by face recognizer
-        label_text = labels[label];
+        label_text = labels[label - 1];
         
         #draw a rectangle around face detected
         #draw_rectangle(img, rect)
@@ -177,55 +186,55 @@ prev_time = int(round(time.time() * 1000))
 #perform a prediction
 while 1:
     frame = get_video()
+    if frame is not None:
+        result = predict(frame)
 
-    result = predict(frame)
-
-    #The second condition is the check for the confidence of the recognition, so that there aren't so many false positives
-    if result is not None and result[2] < 115:
-        #We found a face, parse it out
-        identity = result[0]
-        #Only attack a designated target
-        if targets[identity] == 1:
-            bbox = (result[1][0], result[1][1], result[1][0] + result[1][2], result[1][1] + result[1][3])
-            
-            #Initialize the tracker
-            tracker = create_tracker()
-            ok = tracker.init(frame, bbox)
-            while ok:
-                #Determine X and Y angles 
-                mid_face = (bbox[0] + bbox[2]/2, bbox[1] + bbox[3]/2)
-
-                #print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
-
-                #https://stackoverflow.com/questions/37642834/opencv-how-to-calculate-the-degreesangles-of-an-object-with-its-coordinates
-                #The Kinect v1 image is 640 pixels in width and 480 in height
-                #The horizontal FOV is 62 degrees and the vertical FOV is 48.6
-                #The pixels have been halved in each dimension
+        #The second condition is the check for the confidence of the recognition, so that there aren't so many false positives
+        if result is not None and result[2] < 115:
+            #We found a face, parse it out
+            identity = result[0]
+            #Only attack a designated target
+            if targets[identity] == 1:
+                bbox = (result[1][0], result[1][1], result[1][0] + result[1][2], result[1][1] + result[1][3])
                 
-                x_angle = np.arctan((mid_face[0] - 160) * (np.tan(31.0/180) / 160)) * 180
-                y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
-                #x_angle = (mid_face[0] - 160) * (62/320)
-                #y_angle = (mid_face[1] - 120) * (48.6/240)
-                #print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
+                #Initialize the tracker
+                tracker = create_tracker()
+                ok = tracker.init(frame, bbox)
+                while ok:
+                    #Determine X and Y angles 
+                    mid_face = (bbox[0] + bbox[2]/2, bbox[1] + bbox[3]/2)
 
-                #
-                # MOVE MOTORS HERE!!!!!
-                #
+                    #print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
 
-                #Grab frame
-                frame = get_video()
-                if frame is None:
-                    continue
+                    #https://stackoverflow.com/questions/37642834/opencv-how-to-calculate-the-degreesangles-of-an-object-with-its-coordinates
+                    #The Kinect v1 image is 640 pixels in width and 480 in height
+                    #The horizontal FOV is 62 degrees and the vertical FOV is 48.6
+                    #The pixels have been halved in each dimension
+                    
+                    x_angle = np.arctan((mid_face[0] - 160) * (np.tan(31.0/180) / 160)) * 180
+                    y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
+                    #x_angle = (mid_face[0] - 160) * (62/320)
+                    #y_angle = (mid_face[1] - 120) * (48.6/240)
+                    #print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
 
-                #update tracker
-                ok, bbox = tracker.update(frame)
+                    #
+                    # MOVE MOTORS HERE!!!!!
+                    #
 
-    #
-    #  QUERY API ON SOME INTERVAL HERE!!!
-    #
+                    #Grab frame
+                    frame = get_video()
+                    if frame is None:
+                        continue
 
-    timestamp = int(round(time.time() * 1000))
-    #Query API every 20 seconds
-    if timestamp > prev_time + 20000:
-        query_api(timestamp)
-        prev_time = timestamp
+                    #update tracker
+                    ok, bbox = tracker.update(frame)
+
+        #
+        #  QUERY API ON SOME INTERVAL HERE!!!
+        #
+
+        timestamp = int(round(time.time() * 1000))
+        #Query API every 20 seconds
+        if timestamp > prev_time + 20000:
+            query_api(timestamp)
+            prev_time = timestamp
