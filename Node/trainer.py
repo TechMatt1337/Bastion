@@ -125,7 +125,9 @@ for row in c.execute('SELECT * FROM images'):
     name = row[0] + " " + row[1]
 
     for i in range(2,8):
-        frame = cv2.imread(row[i])
+        buff = base64.b64decode(row[i])
+	arr = np.asarray(bytearray(buff), dtype=np.uint8)
+	frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
 
         if frame is None:
                 c.close()

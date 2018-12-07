@@ -1,6 +1,6 @@
 <iframe width="0" height="0" border="0" name="dummyframe" id="dummyframe"></iframe>
 
-<form action="/api" method="post" onsubmit="this.submit(); this.reset(); return false;" target="dummyframe" enctype="multipart/form-data">
+<form action="/api" method="post" onsubmit="this.submit(); return false;" target="dummyframe" enctype="multipart/form-data">
   <fieldset>
     <legend>New/Update Target:</legend>
     <input type="hidden" name="operation" value="new_target">
@@ -27,7 +27,7 @@
 </form>
 
 
-<form action="/api" method="post" onsubmit="this.submit(); this.reset(); return false;" target="dummyframe" enctype="multipart/form-data">
+<form action="/api" method="post" onsubmit="this.submit(); return false;" target="dummyframe" enctype="multipart/form-data">
   <fieldset>
     <legend>Set Target as Targetable:</legend>
     <input type="hidden" name="operation" value="update_target">
