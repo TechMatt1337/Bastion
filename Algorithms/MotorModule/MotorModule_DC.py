@@ -21,7 +21,7 @@ atexit.register(turnOffMotors)
 myMotor = mh.getMotor(3)
 
 def getSpeed(radians):
-	return int(math.sin(radians)*150)
+	return int(math.sin(radians)*255)
 
 def moveMotor(radians):
 	speed = getSpeed(radians)
