@@ -22,6 +22,14 @@ import pickle
 import requests
 #Get timestamp
 import time
+#Task out the worker
+import Queue
+#To do remote imports
+import sys
+sys.path.append(os.path.abspath("../Algorithms/MotorModule"))
+sys.path.append(os.path.abspath("../Algorithms/GunTrigger"))
+from MotorModule_DC import *
+from GunTrigger import *
 
 # api-endpoint
 URL_API = "http://ec2-18-223-248-15.us-east-2.compute.amazonaws.com/api"
@@ -183,6 +191,27 @@ while query_api(0) != 2:
 #Need to keep track of the previous timestamp in order to query every x seconds
 prev_time = int(round(time.time() * 1000))
 
+#Create a thread to handle motor calls because of synchronous nature
+def motor_worker():
+    while True:
+        angle = q_m.get()
+        moveMotor(angle)
+
+def shoot_worker():
+    while True:
+        notice = q_s.get()
+        fireGun()
+
+q_m = Queue()
+t_m = Thread(target=motor_worker)
+t_m.daemon = True
+t_m.start()
+
+q_s = Queue()
+t_s = Thread(target=shoot_worker)
+t_s.daemon = True
+t_s.start()
+
 #perform a prediction
 while 1:
     frame = get_video()
@@ -211,8 +240,8 @@ while 1:
                     #The horizontal FOV is 62 degrees and the vertical FOV is 48.6
                     #The pixels have been halved in each dimension
                     
-                    x_angle = np.arctan((mid_face[0] - 160) * (np.tan(31.0/180) / 160)) * 180
-                    y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
+                    x_angle = np.arctan((mid_face[0] - 160) * (np.tan(31.0/180) / 160))
+                    #y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
                     #x_angle = (mid_face[0] - 160) * (62/320)
                     #y_angle = (mid_face[1] - 120) * (48.6/240)
                     #print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
@@ -220,6 +249,13 @@ while 1:
                     #
                     # MOVE MOTORS HERE!!!!!
                     #
+                    #Only move if the x angle is greater than 3 degrees
+                    if x_angle > .0524:
+                        q_m.put(x_angle)
+                    
+                    #Only shoot if within 10 degrees of target
+                    if x_angle > .1745:
+                        q_a.put(1)
 
                     #Grab frame
                     frame = get_video()
@@ -232,7 +268,6 @@ while 1:
         #
         #  QUERY API ON SOME INTERVAL HERE!!!
         #
-
         timestamp = int(round(time.time() * 1000))
         #Query API every 20 seconds
         if timestamp > prev_time + 20000:
