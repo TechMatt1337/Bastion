@@ -236,7 +236,7 @@ while 1:
                     #Determine X and Y angles 
                     mid_face = (bbox[0] + bbox[2]/2, bbox[1] + bbox[3]/2)
 
-                    print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
+                    #print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
 
                     #https://stackoverflow.com/questions/37642834/opencv-how-to-calculate-the-degreesangles-of-an-object-with-its-coordinates
                     #The Kinect v1 image is 640 pixels in width and 480 in height
@@ -247,7 +247,7 @@ while 1:
                     y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
                     #x_angle = (mid_face[0] - 160) * (62/320)
                     #y_angle = (mid_face[1] - 120) * (48.6/240)
-                    print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
+                    #print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
 
                     #
                     # MOVE MOTORS HERE!!!!!
@@ -267,6 +267,8 @@ while 1:
 
                     #update tracker
                     ok, bbox = tracker.update(frame)
+	    else:
+		#print(identity + " is not a target");
 
         #
         #  QUERY API ON SOME INTERVAL HERE!!!
@@ -274,5 +276,5 @@ while 1:
         timestamp = int(round(time.time() * 1000))
         #Query API every 20 seconds
         if timestamp > prev_time + 20000:
-            query_api(timestamp)
+            query_api(prev_time)
             prev_time = timestamp
