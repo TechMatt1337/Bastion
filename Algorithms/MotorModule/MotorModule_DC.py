@@ -21,7 +21,10 @@ atexit.register(turnOffMotors)
 myMotor = mh.getMotor(3)
 
 def getSpeed(radians):
-	return int(math.sin(radians)*255)
+	if (radians > 0):
+		return max(200, int(math.sin(radians)*255))
+	else:
+		return min(-200, int(math.sin(radians)*255))
 
 def moveMotor(radians):
 	speed = getSpeed(radians)
@@ -31,9 +34,9 @@ def moveMotor(radians):
 		myMotor.run(Adafruit_MotorHAT.BACKWARD);
 	speed = abs(speed)
 	myMotor.setSpeed(speed)
-	time.sleep(0.021)
+	time.sleep(0.015)
 	myMotor.run(Adafruit_MotorHAT.RELEASE)
-	time.sleep(0.021)
+	time.sleep(0.001)
 
 def rotateMotor(radians):
 	if (radians < 0):
@@ -45,6 +48,6 @@ def rotateMotor(radians):
 			moveMotor(radians)
 			radians -= 0.1
 
-rotateMotor(math.pi)
-rotateMotor(-math.pi)
+#rotateMotor(math.pi)
+#rotateMotor(-math.pi)
 

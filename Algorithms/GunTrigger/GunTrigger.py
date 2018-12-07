@@ -1,4 +1,4 @@
-\import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import time
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
@@ -10,3 +10,6 @@ def fireGun():
     time.sleep(1)
     #print "LED off"
     GPIO.output(18,GPIO.LOW)
+    time.sleep(1)
+
+fireGun()

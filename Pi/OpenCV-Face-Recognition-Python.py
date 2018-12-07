@@ -26,6 +26,9 @@ import time
 import Queue
 #To do remote imports
 import sys
+#Threads
+import threading
+
 sys.path.append(os.path.abspath("../Algorithms/MotorModule"))
 sys.path.append(os.path.abspath("../Algorithms/GunTrigger"))
 from MotorModule_DC import *
@@ -195,20 +198,20 @@ prev_time = int(round(time.time() * 1000))
 def motor_worker():
     while True:
         angle = q_m.get()
-        moveMotor(angle)
+        rotateMotor(angle)
 
 def shoot_worker():
     while True:
         notice = q_s.get()
         fireGun()
 
-q_m = Queue()
-t_m = Thread(target=motor_worker)
+q_m = Queue.Queue()
+t_m = threading.Thread(target=motor_worker)
 t_m.daemon = True
 t_m.start()
 
-q_s = Queue()
-t_s = Thread(target=shoot_worker)
+q_s = Queue.Queue()
+t_s = threading.Thread(target=shoot_worker)
 t_s.daemon = True
 t_s.start()
 
@@ -233,7 +236,7 @@ while 1:
                     #Determine X and Y angles 
                     mid_face = (bbox[0] + bbox[2]/2, bbox[1] + bbox[3]/2)
 
-                    #print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
+                    print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
 
                     #https://stackoverflow.com/questions/37642834/opencv-how-to-calculate-the-degreesangles-of-an-object-with-its-coordinates
                     #The Kinect v1 image is 640 pixels in width and 480 in height
@@ -241,21 +244,21 @@ while 1:
                     #The pixels have been halved in each dimension
                     
                     x_angle = np.arctan((mid_face[0] - 160) * (np.tan(31.0/180) / 160))
-                    #y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
+                    y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
                     #x_angle = (mid_face[0] - 160) * (62/320)
                     #y_angle = (mid_face[1] - 120) * (48.6/240)
-                    #print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
+                    print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
 
                     #
                     # MOVE MOTORS HERE!!!!!
                     #
                     #Only move if the x angle is greater than 3 degrees
-                    if x_angle > .0524:
-                        q_m.put(x_angle)
+                    if abs(x_angle) > .0185:
+                        q_m.put(1*x_angle)
                     
                     #Only shoot if within 10 degrees of target
-                    if x_angle > .1745:
-                        q_a.put(1)
+                    #if x_angle > .1745:
+                        #q_a.put(1)
 
                     #Grab frame
                     frame = get_video()
