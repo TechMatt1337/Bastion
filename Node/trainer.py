@@ -128,7 +128,6 @@ for row in c.execute('SELECT * FROM images'):
         frame = cv2.imread(row[i])
 
         if frame is None:
-                print("I can't even make an image!")
                 c.close()
                 conn.close()
                 sys.exit()
@@ -140,7 +139,7 @@ for row in c.execute('SELECT * FROM images'):
             labels.append(label)
             faces.append(face)
 
-    if labels[:-1] != label:
+    if labels[-1] != label:
         print("Unable to get good face of " + name)
         c.close()
         conn.close()
