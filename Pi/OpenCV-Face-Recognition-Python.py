@@ -18,36 +18,73 @@ import freenect
 import base64
 #Depickle the incoming model
 import pickle
+# importing the requests library 
+import requests
+#Get timestamp
+import time
 
-# ### Training Data
+# api-endpoint
+URL_API = "http://ec2-18-223-248-15.us-east-2.compute.amazonaws.com/api"
+URL_MOD = "http://ec2-18-223-248-15.us-east-2.compute.amazonaws.com/api/model"
 
-# The more images used in training the better. Normally a lot of images are used for training a face recognizer so that it can learn different looks of the same person, for example with glasses, without glasses, laughing, sad, happy, crying, with beard, without beard etc. To keep our tutorial simple we are going to use only 12 images for each person. 
-# 
-# So our training data consists of total 2 persons with 12 images of each person. All training data is inside _`training-data`_ folder. _`training-data`_ folder contains one folder for each person and **each folder is named with format `sLabel (e.g. s1, s2)` where label is actually the integer label assigned to that person**. For example folder named s1 means that this folder contains images for person 1. The directory structure tree for training data is as follows:
-# 
-# ```
-# training-data
-# |-------------- s1
-# |               |-- 1.jpg
-# |               |-- ...
-# |               |-- 12.jpg
-# |-------------- s2
-# |               |-- 1.jpg
-# |               |-- ...
-# |               |-- 12.jpg
-# ```
-# 
-# The _`test-data`_ folder contains images that we will use to test our face recognizer after it has been successfully trained.
+# target list
+targets = {}
+# create our LBPH face recognizer 
+face_recognizer = cv2.face.LBPHFaceRecognizer_create()
+#or use EigenFaceRecognizer by replacing above line with 
+#face_recognizer = cv2.face.EigenFaceRecognizer_create()
+#or use FisherFaceRecognizer by replacing above line with 
+#face_recognizer = cv2.face.FisherFaceRecognizer_create()
+# names labels
+labels = []
+
+#Query the API to update the targeting model if required
+def query_api(timestamp):
+    flag = 0
+
+    # defining a params dict for the parameters to be sent to the API
+    PARAMS = {'lastupdate':timestamp}
+
+    # sending get request and saving the response as response object
+    r = requests.get(url = URL_API, params = PARAMS)
+
+    # extracting data in json format
+    data = r.json()
+
+    # If there are target updates, make the required changes
+    if data['target_updates'] != None:
+        for entry in data['target_updates']:
+            name = entry['last_name'] + " " + entry['first_name']
+            targets[name] = entry['is_target']
+        flag = 1
+
+    #If there is a model change, make the new model
+    if data['new_model'] == True:
+        #Query for new model
+        r = requests.get(url = URL_MOD, params = PARAMS)
+        
+        #extract data
+        data = r.json()
+        
+        #Sanity check
+        if data['model'] != None:
+            #Decode the data
+            buff = base64.decode(data['model'])
+            info = pickle.loads(buff)
+
+            #Load the new targeting labels
+            labels = info['names']
+
+            #Load the new model
+            face_recognizer.loadFromString(info['model'])
+            flag = 2
+
+    return flag
 
 #function to detect face using OpenCV
 def detect_face(img):
     #convert the test image to gray image as opencv face detector expects gray images
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    #Workaround because all the faces are sideways
-    #(h,w) = img.shape[:2]
-    #M = cv2.getRotationMatrix2D((w/2, h/2), 270, 1.0)
-    #gray = cv2.warpAffine(gray, M, (h,w))
 
     #cv2.imshow("Training on image...", cv2.resize(gray, (400, 500)))
     #cv2.waitKey(100)
@@ -71,130 +108,6 @@ def detect_face(img):
     #return only the face part of the image
     return gray[y:y+w, x:x+h], faces[0]
 
-#this function will read all persons' training images, detect face from each image
-#and will return two lists of exactly same size, one list 
-# of faces and another list of labels for each face
-def prepare_training_data(data_folder_path):
-    
-    #------STEP-1--------
-    #get the directories (one directory for each subject) in data folder
-    dirs = os.listdir(data_folder_path)
-    
-    #list to hold all subject faces
-    faces = []
-    #list to hold labels for all subjects
-    labels = []
-    
-    #let's go through each directory and read images within it
-    for dir_name in dirs:
-        
-        #our subject directories start with letter 's' so
-        #ignore any non-relevant directories if any
-        if not dir_name.startswith("s"):
-            continue;
-            
-        #------STEP-2--------
-        #extract label number of subject from dir_name
-        #format of dir name = slabel
-        #, so removing letter 's' from dir_name will give us label
-        label = int(dir_name.replace("s", ""))
-        
-        #build path of directory containin images for current subject subject
-        #sample subject_dir_path = "training-data/s1"
-        subject_dir_path = data_folder_path + "/" + dir_name
-        
-        #get the images names that are inside the given subject directory
-        subject_images_names = os.listdir(subject_dir_path)
-        
-        #------STEP-3--------
-        #go through each image name, read image, 
-        #detect face and add face to list of faces
-        for image_name in subject_images_names:
-            #ignore system files like .DS_Store
-            if image_name.startswith("."):
-                continue;
-            
-            #build image path
-            #sample image path = training-data/s1/1.pgm
-            image_path = subject_dir_path + "/" + image_name
-
-            #read image
-            image = cv2.imread(image_path)
-           
-            #display an image window to show the image 
-            #cv2.imshow("Training on image...", cv2.resize(image, (400, 500)))
-            #cv2.waitKey(100)
-            
-            #detect face
-            face, rect = detect_face(image)
-            
-            #------STEP-4--------
-            #for the purpose of this tutorial
-            #we will ignore faces that are not detected
-            if face is not None:
-                #add face to list of faces
-                faces.append(face)
-                #add label for this face
-                labels.append(label)
-            
-    cv2.destroyAllWindows()
-    cv2.waitKey(1)
-    cv2.destroyAllWindows()
-    
-    return faces, labels
-
-
-#let's first prepare our training data
-#data will be in two lists of same size
-#one list will contain all the faces
-#and other list will contain respective labels for each face
-#print("Preparing data...")
-#faces, labels = prepare_training_data("training-data")
-#print("Data prepared")
-
-#print total faces and labels
-#print("Total faces: ", len(faces))
-#print("Total labels: ", len(labels))
-
-
-# This was probably the boring part, right? Don't worry, the fun stuff is coming up next. It's time to train our own face recognizer so that once trained it can recognize new faces of the persons it was trained on. Read? Ok then let's train our face recognizer. 
-
-# ### Train Face Recognizer
-
-# As we know, OpenCV comes equipped with three face recognizers.
-# 
-# 1. EigenFace Recognizer: This can be created with `cv2.face.createEigenFaceRecognizer()`
-# 2. FisherFace Recognizer: This can be created with `cv2.face.createFisherFaceRecognizer()`
-# 3. Local Binary Patterns Histogram (LBPH): This can be created with `cv2.face.LBPHFisherFaceRecognizer()`
-# 
-# I am going to use LBPH face recognizer but you can use any face recognizer of your choice. No matter which of the OpenCV's face recognizer you use the code will remain the same. You just have to change one line, the face recognizer initialization line given below. 
-
-#create our LBPH face recognizer 
-face_recognizer = cv2.face.LBPHFaceRecognizer_create()
-#face_recognizer = cv2.face.createLBPHFaceRecognizer()
-
-#or use EigenFaceRecognizer by replacing above line with 
-#face_recognizer = cv2.face.EigenFaceRecognizer_create()
-
-#or use FisherFaceRecognizer by replacing above line with 
-#face_recognizer = cv2.face.FisherFaceRecognizer_create()
-
-#train our face recognizer of our training faces
-face_recognizer.train(faces, np.array(labels))
-
-#function to draw rectangle on image 
-#according to given (x, y) coordinates and 
-#given width and heigh
-def draw_rectangle(img, rect):
-    (x, y, w, h) = rect
-    cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
-    
-#function to draw text on give image starting from
-#passed (x, y) coordinates. 
-def draw_text(img, text, x, y):
-    cv2.putText(img, text, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.5, (0, 255, 0), 2)
-
-
 #this function recognizes the person in image passed
 #and draws a rectangle around detected face with name of the 
 #subject
@@ -212,7 +125,7 @@ def predict(img):
         #predict the image using our face recognizer 
         label, confidence = face_recognizer.predict(face)
         #get name of respective label returned by face recognizer
-        label_text = subjects[label];
+        label_text = labels[label];
         
         #draw a rectangle around face detected
         #draw_rectangle(img, rect)
@@ -231,8 +144,6 @@ def get_video():
     return dst
 
 #Tracker code from: https://www.learnopencv.com/object-tracking-using-opencv-cpp-python/
-#print("Initializing tracker...")
-
 def create_tracker():
     tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
     #Normally use KCF, shouldn't use anything above that
@@ -256,9 +167,12 @@ def create_tracker():
         track = cv2.TrackerCSRT_create()
     return track
 
-#load test images
-#test_img1 = cv2.imread("test-data/test1.jpg")
-#test_img2 = cv2.imread("test-data/test2.jpg")
+# Need to seed model
+while query_api(0) != 2:
+    continue
+
+#Need to keep track of the previous timestamp in order to query every x seconds
+prev_time = int(round(time.time() * 1000))
 
 #perform a prediction
 while 1:
@@ -270,67 +184,48 @@ while 1:
     if result is not None and result[2] < 115:
         #We found a face, parse it out
         identity = result[0]
-        bbox = (result[1][0], result[1][1], result[1][0] + result[1][2], result[1][1] + result[1][3])
-        
-        #Initialize the tracker
-        tracker = create_tracker()
-        ok = tracker.init(frame, bbox)
-        while ok:
-            #Determine X and Y angles 
-            mid_face = (bbox[0] + bbox[2]/2, bbox[1] + bbox[3]/2)
-
-            #print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
-
-            #https://stackoverflow.com/questions/37642834/opencv-how-to-calculate-the-degreesangles-of-an-object-with-its-coordinates
-            #The Kinect v1 image is 640 pixels in width and 480 in height
-            #The horizontal FOV is 62 degrees and the vertical FOV is 48.6
-            #The pixels have been halved in each dimension
+        #Only attack a designated target
+        if targets[identity] == 1:
+            bbox = (result[1][0], result[1][1], result[1][0] + result[1][2], result[1][1] + result[1][3])
             
-            x_angle = np.arctan((mid_face[0] - 160) * (np.tan(31.0/180) / 160)) * 180
-            y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
-            #x_angle = (mid_face[0] - 160) * (62/320)
-            #y_angle = (mid_face[1] - 120) * (48.6/240)
-            #print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
+            #Initialize the tracker
+            tracker = create_tracker()
+            ok = tracker.init(frame, bbox)
+            while ok:
+                #Determine X and Y angles 
+                mid_face = (bbox[0] + bbox[2]/2, bbox[1] + bbox[3]/2)
 
-            #
-            # MOVE MOTORS HERE!!!!!
-            #
+                #print("BOUNDS: " + str(mid_face[0]) + "," + str(mid_face[1]))
 
-            #Grab frame
-            frame = get_video()
-            if frame is None:
-                continue
+                #https://stackoverflow.com/questions/37642834/opencv-how-to-calculate-the-degreesangles-of-an-object-with-its-coordinates
+                #The Kinect v1 image is 640 pixels in width and 480 in height
+                #The horizontal FOV is 62 degrees and the vertical FOV is 48.6
+                #The pixels have been halved in each dimension
+                
+                x_angle = np.arctan((mid_face[0] - 160) * (np.tan(31.0/180) / 160)) * 180
+                y_angle = np.arctan((mid_face[1] - 120) * (np.tan(24.3/180) / 120)) * 180
+                #x_angle = (mid_face[0] - 160) * (62/320)
+                #y_angle = (mid_face[1] - 120) * (48.6/240)
+                #print("X/Y ANGLES: " + str(x_angle) + "," + str(y_angle))
 
-            #update tracker
-            ok, bbox = tracker.update(frame)
+                #
+                # MOVE MOTORS HERE!!!!!
+                #
 
-            #This code draws each frame - warning - terrible performance
-            '''if ok:
-                p1 = (int(bbox[0]), int(bbox[1]))
-                p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
-                cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
-                cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-                cv2.imshow('image', frame)
-                cv2.resizeWindow('image', frame.shape[0], frame.shape[1])
-                k = cv2.waitKey(5) & 0xFF
-                if k == 27:
-                    break'''
+                #Grab frame
+                frame = get_video()
+                if frame is None:
+                    continue
+
+                #update tracker
+                ok, bbox = tracker.update(frame)
 
     #
     #  QUERY API ON SOME INTERVAL HERE!!!
     #
 
-    #print("Prediction complete")
-    '''k = cv2.waitKey(5) & 0xFF
-    if k == 27:
-        break'''
-
-cv2.destroyAllWindows()
-#display both images
-#cv2.imshow(subjects[1], cv2.resize(predicted_img1, (400, 500)))
-#print("Found face at " + str(bbox[0] + bbox[2] / 2) + ", " + str(bbox[1] + bbox[3] / 2))
-#cv2.imshow(subjects[2], cv2.resize(predicted_img2, (400, 500)))
-#cv2.waitKey(0)
-#cv2.destroyAllWindows()
-#cv2.waitKey(1)
-#cv2.destroyAllWindows()
+    timestamp = int(round(time.time() * 1000))
+    #Query API every 20 seconds
+    if timestamp > prev_time + 20000:
+        query_api(timestamp)
+        prev_time = timestamp
