@@ -11,7 +11,7 @@ STEPTYPES = {	"single":Adafruit_MotorHAT.SINGLE,
 		"double":Adafruit_MotorHAT.DOUBLE,
 		"interleave":Adafruit_MotorHAT.INTERLEAVE,
 		"micro":Adafruit_MotorHAT.MICROSTEP}
-MOTORS = {"horizontal":1,"vertical":3}
+MOTORS = {"horizontal":1,"vertical":2}
 
 class MotorController:
 
@@ -23,9 +23,9 @@ class MotorController:
 		global MH
                 MH = Adafruit_MotorHAT(addr)
 		self.stepperMotor = MH.getStepper(steps, motorPort)
-		self.stepperMotor.setSpeed(30)
+		self.stepperMotor.setSpeed(180)
 
-	def rotateMotor(self,degree,dir = "cw",step = "double"):
+	def rotateMotor(self,degree,dir = "cw",step = "single"):
                 """
                 Rotate motor for a certain degree from where it is located 
                 at in a specified direction.
@@ -60,6 +60,6 @@ class MotorController:
 	atexit.register(turnOffMotors)
 
 if __name__ == '__main__':
-    m = MotorControler()
-    m.rotateMotor(degree=360,step="single")
-    m.rotateMotor(degree=360,step="double",dir="ccw")
+    m = MotorController(motor="vertical")
+    m.rotateMotor(degree=1000,step="double")
+   # m.rotateMotor(degree=360,step="double",dir="ccw")
