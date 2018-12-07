@@ -16,6 +16,11 @@ let db = new sqlite3.Database('./targets.db', (err) => {
 	console.log('loaded targets db');
 });
 
+let model = null;
+let generating_model = false;
+let last_model_update = 0;
+let new_images = true;
+
 app.use(bodyParser.urlencoded({extended:true}));
 app.use(bodyParser.json());
 
@@ -64,6 +69,7 @@ app.get('/api/', (req, res) => {
 
 	                        data.image_updates.push(curJSON);
 	                });
+			data["new_model"] = ((last_model_update >= lastupdate) ? true : false);
 			res.json(data);
 	        });
 
@@ -132,6 +138,10 @@ app.get('/api/images/', (req, res) => {
         });
 });
 
+app.get('/api/model/', (req, res) => {
+	res.json({'model': model});
+});
+
 
 app.post('/api/', upload.array('imgs',6), (req, res) => {
 	console.log(req.body);
@@ -176,6 +186,7 @@ app.post('/api/', upload.array('imgs',6), (req, res) => {
 					if (err) {
 						throw err;
 					}
+					new_images = true;
 					console.log('ADDED ' +
 						req.body.lname + ', ' +
 						req.body.fname + ' WITH NEW IMAGES ');
@@ -196,6 +207,25 @@ app.post('/api/', upload.array('imgs',6), (req, res) => {
 	res.json({success: result});;
 });
 
+setInterval(() => {
+	let py = spawn('python', ['trainer.py'])
+	let new_model = ''
+
+	if (new_images) {
+		console.log('generating new model...');
+		py.stdout.on('data', (data) => {
+			generating_model = true;
+			new_model += data.toString();
+			new_images = false;
+		});
+		py.stdout.on('end', () => {
+			console.log('new model generated!')
+			model = new_model;
+			generating_model = false;
+			last_model_update = (new Date).getTime();
+		});
+	}
+}, 60000);
 
 
 //db.close()
