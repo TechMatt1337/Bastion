@@ -1,0 +1,21 @@
+{
+	"name": "bastion-web-service",
+	"version": "0.9.1",
+	"description": "A node server that sends data to the Bastion Units!",
+	"main": "server.js",
+	"scripts": {
+		"start": "sudo node server.js"
+	},
+	"dependencies": {
+		"body-parser": "^1.18.3",
+		"express": "^4.16.4",
+		"multer": "^1.4.1",
+		"path": "^0.12.7",
+		"sqlite3": "^4.0.4"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/TechMatt1337/Bastion"
+	},
+	"license": "BSD-3-Clause"
+}
